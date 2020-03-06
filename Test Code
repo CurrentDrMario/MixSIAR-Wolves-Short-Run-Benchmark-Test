@@ -1,0 +1,58 @@
+#MixSIAR Wolves example "Short" Run Benchmark Test
+#For consistent data, please make sure there are no background programs taking up memory or processing power
+#Please be sure to report Processor (ex: i7-5500U), RAM, and Runtime on Twitter to @FutureDrMario
+
+#Load Packages
+library(MixSIAR)
+library(lubridate)
+
+mixsiar.dir <- find.package("MixSIAR")
+paste0(mixsiar.dir,"/example_scripts")
+source(paste0(mixsiar.dir,"/example_scripts/mixsiar_script_wolves.R"))
+
+# Replace the system.file call with the path to your file
+mix.filename <- system.file("extdata", "wolves_consumer.csv", package = "MixSIAR")
+
+# Load the mixture/consumer data
+mix <- load_mix_data(filename=mix.filename, 
+                     iso_names=c("d13C","d15N"), 
+                     factors=c("Region","Pack"), 
+                     fac_random=c(TRUE,TRUE), 
+                     fac_nested=c(FALSE,TRUE), 
+                     cont_effects=NULL)
+
+# Replace the system.file call with the path to your file
+source.filename <- system.file("extdata", "wolves_sources.csv", package = "MixSIAR")
+
+# Load the source data
+source <- load_source_data(filename=source.filename,
+                           source_factors="Region", 
+                           conc_dep=FALSE, 
+                           data_type="means", 
+                           mix)
+
+# Replace the system.file call with the path to your file
+discr.filename <- system.file("extdata", "wolves_discrimination.csv", package = "MixSIAR")
+
+# Load the discrimination/TDF data
+discr <- load_discr_data(filename=discr.filename, mix)
+
+# Write the JAGS model file
+model_filename <- "MixSIAR_model.txt"   # Name of the JAGS model file
+resid_err <- TRUE
+process_err <- TRUE
+write_JAGS_model(model_filename, resid_err, process_err, mix, source)
+
+#make sure model runs
+jags.1 <- run_model(run="test", mix, source, discr, model_filename, 
+                    alpha.prior = 1, resid_err, process_err)
+
+#Short Run Benchmark Test
+t0<-now()
+jags.1 <- run_model(run="short", mix, source, discr, model_filename, 
+                     alpha.prior = 1, resid_err, process_err)
+t1<-now()
+runtime <- t1-t0
+
+#Report this value
+print(runtime)
